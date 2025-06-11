@@ -139,6 +139,24 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+
+    app.get("/submitted-assignments", async (req, res) => {
+      const email = req.query.email;
+      if (!email) return res.status(400).send({ message: "Email is required" });
+
+      try {
+        const submissions = await client
+          .db(process.env.MONGO_DB)
+          .collection("submittedAssignments")
+          .find({ userEmail: email })
+          .toArray();
+
+        res.send(submissions);
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+    
     app.post("/submitted-assignments", async (req, res) => {
       const data = req.body;
       try {
