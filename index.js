@@ -50,7 +50,57 @@ async function run() {
       res.send(result);
     });
 
-    
+    app.get("/assignment/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const assignment = await assignmentCollections.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!assignment) {
+          return res
+            .status(404)
+            .send({ success: false, message: "Assignment not found" });
+        }
+        res.send(assignment);
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    app.put("/assignments/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedData = req.body;
+
+      try {
+        const result = await assignmentCollections.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              title: updatedData.title,
+              description: updatedData.description,
+              marks: updatedData.marks,
+              thumbnail: updatedData.thumbnail,
+              difficulty: updatedData.difficulty,
+              dueDate: updatedData.dueDate,
+            },
+          }
+        );
+
+        if (result.modifiedCount > 0) {
+          res.send({
+            success: true,
+            message: "Assignment updated successfully",
+          });
+        } else {
+          res
+            .status(400)
+            .send({ success: false, message: "Nothing was updated" });
+        }
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
     app.delete("/assignments/:id", async (req, res) => {
       const id = req.params.id;
       const email = req.query.email;
@@ -67,12 +117,10 @@ async function run() {
         }
 
         if (assignment.creator?.email !== email) {
-          return res
-            .status(403)
-            .send({
-              success: false,
-              message: "You are not authorized to delete this assignment.",
-            });
+          return res.status(403).send({
+            success: false,
+            message: "You are not authorized to delete this assignment.",
+          });
         }
 
         const result = await assignmentCollections.deleteOne({
@@ -90,7 +138,6 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
-
   } finally {
     app.listen(port, () => {
       console.log(`App listening on port ${port}`);
