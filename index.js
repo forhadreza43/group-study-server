@@ -23,13 +23,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    // console.log(
-    //   "Pinged your deployment. You successfully connected to MongoDB!"
-    // );
     const assignmentCollections = client
       .db(process.env.MONGO_DB)
       .collection("assignments");
@@ -38,10 +31,18 @@ async function run() {
       res.send("Server is running");
     });
 
-    app.post("/assignments", (req, res) => {
+    app.post("/assignments", async (req, res) => {
       const assignment = req.body;
-      console.log(assignment);
-      res.send("Send");
+      try {
+        const result = await assignmentCollections.insertOne(assignment);
+        res.send({
+          success: true,
+          message: "Assignment created successfully",
+          insertedId: result.insertedId,
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
     });
   } finally {
     // Ensures that the client will close when you finish/error
