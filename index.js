@@ -101,6 +101,7 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+    
     app.delete("/assignments/:id", async (req, res) => {
       const id = req.params.id;
       const email = req.query.email;
@@ -138,6 +139,20 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+    app.post("/submitted-assignments", async (req, res) => {
+      const data = req.body;
+      try {
+        const result = await client
+          .db(process.env.MONGO_DB)
+          .collection("submittedAssignments")
+          .insertOne({ ...data, status: "pending", submittedAt: new Date() });
+
+        res.send({ success: true, insertedId: result.insertedId });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+    
   } finally {
     app.listen(port, () => {
       console.log(`App listening on port ${port}`);
