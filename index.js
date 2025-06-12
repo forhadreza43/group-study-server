@@ -46,9 +46,26 @@ async function run() {
     });
 
     app.get("/assignments", async (req, res) => {
-      const result = await assignmentCollections.find().toArray();
-      res.send(result);
+      const { difficulty, search } = req.query;
+
+      const filter = {};
+
+      if (difficulty) {
+        filter.difficulty = difficulty;
+      }
+
+      if (search) {
+        filter.title = { $regex: search, $options: "i" };
+      }
+
+      try {
+        const result = await assignmentCollections.find(filter).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
     });
+    
 
     app.get("/assignment/:id", async (req, res) => {
       const id = req.params.id;
@@ -166,6 +183,54 @@ async function run() {
           .insertOne({ ...data, status: "pending", submittedAt: new Date() });
 
         res.send({ success: true, insertedId: result.insertedId });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    app.patch("/submitted-assignments/:id", async (req, res) => {
+      const id = req.params.id;
+      const { obtainedMarks, feedback } = req.body;
+
+      try {
+        const result = await client
+          .db(process.env.MONGO_DB)
+          .collection("submittedAssignments")
+          .updateOne(
+            { _id: new ObjectId(id) },
+            {
+              $set: {
+                obtainedMarks,
+                feedback,
+                status: "completed",
+                markedAt: new Date(),
+              },
+            }
+          );
+
+        res.send({ success: true, modifiedCount: result.modifiedCount });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+    
+    
+    app.get("/pending-submitted-assignments", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Email is required" });
+      }
+
+      try {
+        const submissions = await client
+          .db(process.env.MONGO_DB)
+          .collection("submittedAssignments")
+          .find({ status: "pending", userEmail: { $ne: email } }) // exclude self
+          .toArray();
+
+        res.send(submissions);
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
       }
