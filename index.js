@@ -5,7 +5,6 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 3000;
 const admin = require("firebase-admin");
-// const serviceAccount = require("./serviceAccountKey.json");
 
 const app = express();
 
@@ -60,7 +59,7 @@ async function run() {
       res.send("Server is running");
     });
 
-    app.post("/assignments", async (req, res) => {
+    app.post("/assignments", verifyToken, async (req, res) => {
       const assignment = req.body;
       try {
         const result = await assignmentCollections.insertOne(assignment);
@@ -95,7 +94,7 @@ async function run() {
       }
     });
 
-    app.get("/assignment/:id", async (req, res) => {
+    app.get("/assignment/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       try {
         const assignment = await assignmentCollections.findOne({
@@ -113,7 +112,7 @@ async function run() {
       }
     });
 
-    app.put("/assignments/:id", async (req, res) => {
+    app.put("/assignments/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const updatedData = req.body;
 
@@ -147,7 +146,7 @@ async function run() {
       }
     });
 
-    app.delete("/assignments/:id", async (req, res) => {
+    app.delete("/assignments/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const email = req.query.email;
 
@@ -185,7 +184,7 @@ async function run() {
       }
     });
 
-    app.get("/submitted-assignments", async (req, res) => {
+    app.get("/submitted-assignments", verifyToken, async (req, res) => {
       const email = req.query.email;
       if (!email) return res.status(400).send({ message: "Email is required" });
 
@@ -202,7 +201,7 @@ async function run() {
       }
     });
 
-    app.post("/submitted-assignments", async (req, res) => {
+    app.post("/submitted-assignments", verifyToken, async (req, res) => {
       const data = req.body;
       try {
         const result = await client
@@ -216,7 +215,7 @@ async function run() {
       }
     });
 
-    app.patch("/submitted-assignments/:id", async (req, res) => {
+    app.patch("/submitted-assignments/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const { obtainedMarks, feedback } = req.body;
 
