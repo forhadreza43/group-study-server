@@ -4,12 +4,41 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 3000;
+const admin = require("firebase-admin");
+// const serviceAccount = require("./serviceAccountKey.json");
 
 const app = express();
 
 // Middlewire
 app.use(cors());
 app.use(express.json());
+
+//Custom Middlewire
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send({ success: false, message: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).send({ success: false, message: "Forbidden" });
+  }
+};
+
+admin.initializeApp({
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+  }),
+});
 
 const uri = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@crudcluster.buy7rkc.mongodb.net/${process.env.MONGO_DB}?retryWrites=true&w=majority&appName=crudCluster`;
 
@@ -65,7 +94,6 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
-    
 
     app.get("/assignment/:id", async (req, res) => {
       const id = req.params.id;
@@ -118,7 +146,7 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
-    
+
     app.delete("/assignments/:id", async (req, res) => {
       const id = req.params.id;
       const email = req.query.email;
@@ -173,7 +201,7 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
-    
+
     app.post("/submitted-assignments", async (req, res) => {
       const data = req.body;
       try {
@@ -213,9 +241,8 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
-    
-    
-    app.get("/pending-submitted-assignments", async (req, res) => {
+
+    app.get("/pending-submitted-assignments", verifyToken, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         return res
@@ -235,7 +262,6 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
-    
   } finally {
     app.listen(port, () => {
       console.log(`App listening on port ${port}`);
